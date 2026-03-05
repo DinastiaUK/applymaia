@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Interativo</title>
+    <style>
+        :root {
+            --bg-color: #f7f7f8;
+            --chat-bg: #ffffff;
+            --header-bg: #031525;
+            /* Dark blue background from reference */
+            --header-text: #ffffff;
+            --progress-track: rgba(255, 255, 255, 0.2);
+            --progress-fill: #ffffff;
+            --bot-bubble: #f1f5f9;
+            --bot-text: #1e293b;
+            --user-bubble: #2563eb;
+            --user-text: #ffffff;
+            --input-border: #e2e8f0;
+            --button-bg: #2563eb;
+            --button-text: #ffffff;
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+        }
+
+        #chat-container {
+            width: 100%;
+            max-width: 600px;
+            height: 100%;
+            background-color: var(--chat-bg);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            position: relative;
+        }
+
+        #chat-header {
+            background-color: var(--header-bg);
+            color: var(--header-text);
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+        }
+
+        .header-logo img {
+            height: 24px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        .header-progress-container {
+            flex-grow: 1;
+            margin: 0 24px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            max-width: 250px;
+        }
+
+        .progress-line {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background-color: var(--progress-track);
+            transform: translateY(-50%);
+            z-index: 0;
+        }
+
+        .progress-line-fill {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            height: 1px;
+            background-color: var(--progress-fill);
+            transform: translateY(-50%);
+            z-index: 0;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .progress-dots {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .progress-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--header-bg);
+            border: 1px solid var(--progress-track);
+            transition: all 0.3s ease;
+        }
+
+        .progress-dot.active {
+            background-color: var(--progress-fill);
+            border-color: var(--progress-fill);
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+        }
+
+        .header-step {
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+        }
+
+        .step-current {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .step-total {
+            font-size: 13px;
+            opacity: 0.7;
+        }
+
+        #chat-history {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .message-row {
+            display: flex;
+            width: 100%;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .message-row.bot {
+            justify-content: flex-start;
+            align-items: flex-start;
+        }
+
+        .bot-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            margin-right: 12px;
+            background-color: #cbd5e1;
+            flex-shrink: 0;
+            background-image: url('https://i.pravatar.cc/150?img=11');
+            /* Placeholder image of a person */
+            background-size: cover;
+            background-position: center;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            margin-top: 2px;
+        }
+
+        .message-row.user {
+            justify-content: flex-end;
+        }
+
+        .bubble {
+            max-width: 80%;
+            padding: 14px 18px;
+            border-radius: 8px;
+            line-height: 1.5;
+            font-size: 15px;
+            word-wrap: break-word;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .bubble.bot {
+            background-color: var(--bot-bubble);
+            color: var(--bot-text);
+        }
+
+        .bubble.user {
+            background-color: var(--user-bubble);
+            color: var(--user-text);
+        }
+
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 8px 12px;
+            align-items: center;
+        }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            background-color: #94a3b8;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .dot:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .dot:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+
+        @keyframes bounce {
+
+            0%,
+            80%,
+            100% {
+                transform: scale(0);
+            }
+
+            40% {
+                transform: scale(1);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        #input-area {
+            padding: 16px 20px;
+            background-color: var(--chat-bg);
+            border-top: none;
+            box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.02);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #dynamic-input-container {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Inputs gerados dinamicamente herdam esse estilo */
+        #dynamic-input-container input,
+        #dynamic-input-container select {
+            width: 100%;
+            padding: 13px 18px;
+            border: 1.5px solid var(--input-border);
+            border-radius: 10px;
+            font-size: 15px;
+            font-family: var(--font-family);
+            outline: none;
+            background-color: #fff;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            height: 50px;
+            box-sizing: border-box;
+        }
+
+        #dynamic-input-container input:focus,
+        #dynamic-input-container select:focus {
+            border-color: var(--button-bg);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+
+        /* Mantém compatibilidade com id antigo usado no JS */
+        #user-input {
+            width: 100%;
+            padding: 13px 18px;
+            border: 1.5px solid var(--input-border);
+            border-radius: 10px;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            font-family: var(--font-family);
+            background-color: #ffffff;
+            height: 50px;
+            box-sizing: border-box;
+        }
+
+        #user-input:focus {
+            border-color: var(--button-bg);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+
+        #send-btn {
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            border: none;
+            border-radius: 10px;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.15s, background-color 0.2s;
+            flex-shrink: 0;
+        }
+
+        #send-btn:hover {
+            transform: scale(1.05);
+            background-color: #1d4ed8;
+        }
+
+        #send-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* --- Estilo Específico Input Telefone --- */
+        .phone-input-wrapper {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            border: 1px solid var(--input-border);
+            border-radius: 24px;
+            background-color: #ffffff;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .phone-input-wrapper:focus-within {
+            border-color: var(--button-bg);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+        }
+
+        .phone-country {
+            display: flex;
+            align-items: center;
+            padding: 0 12px 0 16px;
+            font-size: 15px;
+            color: #1e293b;
+            cursor: pointer;
+            border-right: 1px solid #e2e8f0;
+        }
+
+        .phone-country img {
+            width: 20px;
+            margin-right: 6px;
+            border-radius: 2px;
+        }
+
+        .phone-wa-icon {
+            padding: 0 8px 0 12px;
+            display: flex;
+            align-items: center;
+        }
+
+        .phone-wa-icon svg {
+            width: 22px;
+            height: 22px;
+            fill: #25D366;
+        }
+
+        .phone-input-wrapper input {
+            flex-grow: 1;
+            border: none;
+            outline: none;
+            padding: 14px 0;
+            font-size: 15px;
+            font-family: var(--font-family);
+            background: transparent;
+        }
+
+        /* Styling for select inputs */
+        select.custom-select {
+            width: 100%;
+            padding: 14px 20px;
+            border: 1px solid var(--input-border);
+            border-radius: 24px;
+            font-size: 15px;
+            outline: none;
+            font-family: var(--font-family);
+            appearance: none;
+            background: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") no-repeat right 16px center;
+            background-size: 16px;
+            background-color: #ffffff;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        select.custom-select:focus {
+            border-color: var(--button-bg);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+            background-color: #ffffff;
+        }
+
+        /* Webhook loading overlay */
+        #webhook-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.8);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--button-bg);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* ===== TELA ESPECIAL CAL.COM ===== */
+        #cal-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+        }
+
+        .cal-success-header {
+            width: 100%;
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            color: white;
+            padding: 32px 24px;
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        .cal-success-icon {
+            width: 56px;
+            height: 56px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+        }
+
+        .cal-success-icon svg {
+            width: 32px;
+            height: 32px;
+            stroke: white;
+            fill: none;
+            stroke-width: 2.5;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .cal-success-header h2 {
+            margin: 0 0 8px;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .cal-success-header p {
+            margin: 0;
+            font-size: 14px;
+            opacity: 0.9;
+            line-height: 1.5;
+        }
+
+        .cal-embed-container {
+            width: 100%;
+            flex: 1;
+            min-height: 650px;
+        }
+
+        #cal-embed {
+            width: 100%;
+            min-height: 650px;
+        }
+    </style>
+    <!-- Import Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+</head>
+
+<body>
+
+    <div id="chat-container">
+        <div id="chat-header">
+            <div class="header-logo">
+                <img src="https://app.maiacompany.io/maia_logo.png" alt="Maia Company Logo" />
+            </div>
+            <div class="header-progress-container">
+                <div class="progress-line"></div>
+                <div class="progress-line-fill" id="progress-line-fill"></div>
+                <div class="progress-dots" id="progress-dots"></div>
+            </div>
+            <div class="header-step">
+                <span class="step-current" id="step-current">0</span>
+                <span class="step-total">de <span id="step-total">8</span></span>
+            </div>
+        </div>
+
+        <div id="chat-history">
+            <!-- Messages will appear here -->
+        </div>
+
+        <div id="webhook-overlay">
+            <div class="spinner"></div>
+            <p style="margin-top: 16px; font-weight: 500; color: #333;">Finalizando...</p>
+        </div>
+
+        <!-- Tela especial para leads quentes -->
+        <div id="cal-screen">
+            <div class="cal-success-header">
+                <div class="cal-success-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                        <path d="M22 4 12 14.01l-3-3" />
+                    </svg>
+                </div>
+                <h2 id="cal-title">Parabéns! Você foi selecionado(a)! 🎉</h2>
+                <p id="cal-subtitle">Identificamos que seu perfil é ideal para uma consultoria personalizada. Agende
+                    agora mesmo sua reunião com uma de nossas especialistas!</p>
+            </div>
+            <div class="cal-embed-container">
+                <div id="cal-embed"></div>
+            </div>
+        </div>
+
+        <div id="input-area">
+            <!-- Dynamic input container -->
+            <div id="dynamic-input-container">
+            </div>
+            <button id="send-btn" aria-label="Enviar">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 19V5M5 12l7-7 7 7" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // CONFIGURAÇÃO DO WEBHOOK
+        const WEBHOOK_URL = 'https://n8n.dinastia.uk/webhook/dfe82a01-a414-4cf3-8d21-c8fa51e4a68e';
+
+        // CONFIGURAÇÃO DO LEAD SCORING
+        const LEAD_SCORE_THRESHOLD = 50; // Score minimo para mostrar Cal.com
+
+        // AGENDAS CAL.COM (roleta aleatoria)
+        const CAL_URLS = [
+            'https://cal.com/raquel-mota-byt8nd/dinastia',
+            'https://cal.com/larissa-alvarenga-1grx8k/30min'
+        ];
+
+        // MAPA DOS CAMPOS (sem booking_start_time - agora é via Cal.com)
+        const fields = [
+            { id: 'nome', question: "Olá! Qual é o seu nome completo?", type: "text", placeholder: "Ex: João da Silva" },
+            { id: 'telefone', question: "Prazer em conhecer, {nome}! Qual é o seu telefone (com DDD)?", type: "tel", placeholder: "Ex: (11) 99999-9999" },
+            { id: 'email', question: "Qual o seu melhor e-mail?", type: "email", placeholder: "Ex: joao@email.com" },
+            { id: 'nome_empresa', question: "Qual é o nome da sua empresa?", type: "text", placeholder: "Nome da Empresa" },
+            { id: 'nicho', question: "Em qual segmento ou nicho a sua empresa atua?", type: "text", placeholder: "Ex: Tecnologia, Varejo, Saúde..." },
+            { id: 'qtd_colaboradores', question: "Qual a quantidade de colaboradores hoje?", type: "select", options: ["1 a 5", "6 a 15", "16 a 50", "51 a 200", "Mais de 200"] },
+            { id: 'cargo', question: "Qual é o seu cargo na empresa?", type: "text", placeholder: "Ex: CEO, Diretor Comercial, Gerente..." },
+            { id: 'faturamento_anual', question: "Qual o faturamento anual da empresa (aproximado)?", type: "select", options: ["Até R$ 100 mil", "De R$ 100 mil a R$ 500 mil", "De R$ 500 mil a R$ 1 milhão", "De R$ 1 milhão a R$ 5 milhões", "Acima de R$ 5 milhões"] }
+        ];
+
+        let currentStep = 0;
+        const answers = {};
+
+        const chatHistory = document.getElementById('chat-history');
+        const dynamicInputContainer = document.getElementById('dynamic-input-container');
+        const sendBtn = document.getElementById('send-btn');
+        const webhookOverlay = document.getElementById('webhook-overlay');
+
+        // Configuração do Header
+        const progressDotsContainer = document.getElementById('progress-dots');
+        const progressLineFill = document.getElementById('progress-line-fill');
+        const stepCurrentEl = document.getElementById('step-current');
+        const stepTotalEl = document.getElementById('step-total');
+
+        const totalSteps = fields.length;
+        stepTotalEl.innerText = totalSteps;
+
+        // Visual dots count
+        const DOT_COUNT = 5;
+        for (let i = 0; i < DOT_COUNT; i++) {
+            const dot = document.createElement('div');
+            dot.className = 'progress-dot';
+            if (i === 0) dot.classList.add('active'); // Start with the first dot active
+            progressDotsContainer.appendChild(dot);
+        }
+
+        function updateProgress() {
+            stepCurrentEl.innerText = currentStep;
+
+            const progressRatio = currentStep / totalSteps;
+            const fillPercentage = progressRatio * 100;
+            progressLineFill.style.width = `${fillPercentage}%`;
+
+            const dots = document.querySelectorAll('.progress-dot');
+            dots.forEach((dot, index) => {
+                const dotThreshold = index / (DOT_COUNT - 1);
+                if (progressRatio >= dotThreshold || index === 0) { // always keep first active or properly scaled
+                    dot.classList.add('active');
+                } else {
+                    dot.classList.remove('active');
+                }
+            });
+        }
+
+        function scrollToBottom() {
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        async function showTyping() {
+            const html = `
+                <div class="message-row bot typing-row">
+                    <div class="bot-avatar"></div>
+                    <div class="bubble bot typing-indicator">
+                        <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+                    </div>
+                </div>
+            `;
+            chatHistory.insertAdjacentHTML('beforeend', html);
+            scrollToBottom();
+            return new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 700)); // Delay simulado
+        }
+
+        function removeTyping() {
+            const typingRows = document.querySelectorAll('.typing-row');
+            typingRows.forEach(row => row.remove());
+        }
+
+        function addBotMessage(text) {
+            // Substitui variaveis no texto (ex: {nome})
+            const formattedText = text.replace(/{(\w+)}/g, (match, key) => answers[key] || match);
+
+            const html = `
+                <div class="message-row bot">
+                    <div class="bot-avatar"></div>
+                    <div class="bubble bot">${formattedText}</div>
+                </div>
+            `;
+            chatHistory.insertAdjacentHTML('beforeend', html);
+            scrollToBottom();
+        }
+
+        function addUserMessage(text) {
+            const html = `
+                <div class="message-row user">
+                    <div class="bubble user">${text}</div>
+                </div>
+            `;
+            chatHistory.insertAdjacentHTML('beforeend', html);
+            scrollToBottom();
+        }
+
+        function setupInput(field) {
+            dynamicInputContainer.innerHTML = '';
+
+            if (field.type === 'select') {
+                const select = document.createElement('select');
+                select.className = 'custom-select';
+                select.id = 'current-input';
+
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.innerText = 'Selecione uma opção...';
+                defaultOption.disabled = true;
+                defaultOption.selected = true;
+                select.appendChild(defaultOption);
+
+                field.options.forEach(opt => {
+                    const option = document.createElement('option');
+                    option.value = opt;
+                    option.innerText = opt;
+                    select.appendChild(option);
+                });
+
+                dynamicInputContainer.appendChild(select);
+
+            } else if (field.type === 'tel') {
+                // Wrapper de telefone custom
+                const wrapper = document.createElement('div');
+                wrapper.className = 'phone-input-wrapper';
+
+                const countryDiv = document.createElement('div');
+                countryDiv.className = 'phone-country';
+                countryDiv.innerHTML = `
+                    <img src="https://flagcdn.com/w20/br.png" alt="BR">
+                    +55
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                `;
+
+                const iconDiv = document.createElement('div');
+                iconDiv.className = 'phone-wa-icon';
+                iconDiv.innerHTML = `
+                   <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
+                    </svg>
+                `;
+
+                const input = document.createElement('input');
+                input.type = 'tel';
+                input.id = 'current-input';
+                input.placeholder = field.placeholder || '';
+                input.autocomplete = "off";
+
+                // Máscara básica para telefone BR
+                input.addEventListener('input', function (e) {
+                    let x = e.target.value.replace(/\D/g, '').match(/(\d{0,2})(\d{0,5})(\d{0,4})/);
+                    e.target.value = !x[2] ? x[1] : '(' + x[1] + ') ' + x[2] + (x[3] ? '-' + x[3] : '');
+                });
+
+                input.addEventListener('keypress', function (e) {
+                    if (e.key === 'Enter') handleSend();
+                });
+
+                wrapper.appendChild(countryDiv);
+                wrapper.appendChild(iconDiv);
+                wrapper.appendChild(input);
+
+                dynamicInputContainer.appendChild(wrapper);
+
+                if (window.innerWidth > 768) {
+                    setTimeout(() => input.focus(), 10);
+                }
+
+            } else {
+                const input = document.createElement('input');
+                input.type = field.type;
+                input.id = 'current-input';
+                input.placeholder = field.placeholder || '';
+
+                dynamicInputContainer.appendChild(input);
+
+                input.addEventListener('keypress', function (e) {
+                    if (e.key === 'Enter') {
+                        handleSend();
+                    }
+                });
+
+                if (window.innerWidth > 768) {
+                    input.focus();
+                }
+            }
+        }
+
+        // ===== LEAD SCORING =====
+        function calculateLeadScore() {
+            let score = 0;
+            const cargo = (answers.cargo || '').toLowerCase();
+            const faturamento = answers.faturamento_anual || '';
+            const colaboradores = answers.qtd_colaboradores || '';
+
+            // Pontuação por CARGO (match parcial case-insensitive)
+            const cargoTop = ['ceo', 'fundador', 'sócio', 'socio', 'proprietário', 'proprietario', 'dono', 'owner', 'founder'];
+            const cargoAlto = ['diretor', 'vp', 'vice-presidente', 'vice presidente', 'cto', 'cfo', 'coo', 'cmo', 'c-level', 'clevel'];
+            const cargoMedio = ['gerente', 'head', 'coordenador', 'supervisor', 'manager'];
+
+            if (cargoTop.some(k => cargo.includes(k))) {
+                score += 40;
+            } else if (cargoAlto.some(k => cargo.includes(k))) {
+                score += 30;
+            } else if (cargoMedio.some(k => cargo.includes(k))) {
+                score += 15;
+            } else {
+                score += 5;
+            }
+
+            // Pontuação por FATURAMENTO
+            const faturamentoMap = {
+                'Acima de R$ 5 milhões': 40,
+                'De R$ 1 milhão a R$ 5 milhões': 30,
+                'De R$ 500 mil a R$ 1 milhão': 15,
+                'De R$ 100 mil a R$ 500 mil': 10,
+                'Até R$ 100 mil': 5
+            };
+            score += faturamentoMap[faturamento] || 0;
+
+            // Bônus por QTD COLABORADORES
+            const colabMap = {
+                'Mais de 200': 10,
+                '51 a 200': 8,
+                '16 a 50': 5,
+                '6 a 15': 3,
+                '1 a 5': 1
+            };
+            score += colabMap[colaboradores] || 0;
+
+            return score;
+        }
+
+        function showCalScreen() {
+            document.getElementById('chat-history').style.display = 'none';
+            document.getElementById('input-area').style.display = 'none';
+
+            // Roleta aleatória entre as agendas
+            const selectedCal = CAL_URLS[Math.floor(Math.random() * CAL_URLS.length)];
+            answers.cal_url_assigned = selectedCal;
+            const calLink = selectedCal.replace('https://cal.com/', '');
+
+            const nome = answers.nome ? answers.nome.split(' ')[0] : '';
+            document.getElementById('cal-title').textContent = `Parabéns, ${nome}! Você foi selecionado(a)! 🎉`;
+
+            document.getElementById('cal-screen').style.display = 'flex';
+
+            // Cal.com SDK — snippet correto do repositório oficial
+            // Funciona pois esta pagina e servida sem sandbox (EasyPanel)
+            (function (C, A, L) {
+                let p = function (a, ar) { a.q.push(ar); };
+                let d = C.document;
+                C.Cal = C.Cal || function () {
+                    let cal = C.Cal;
+                    let ar = arguments;
+                    if (!cal.loaded) {
+                        cal.ns = {};
+                        cal.q = cal.q || [];
+                        d.head.appendChild(d.createElement("script")).src = A;
+                        cal.loaded = true;
+                    }
+                    if (ar[0] === L) {
+                        const api = function () { p(api, arguments); };
+                        const namespace = ar[1];
+                        api.q = api.q || [];
+                        if (typeof namespace === "string") {
+                            cal.ns[namespace] = cal.ns[namespace] || api;
+                            p(cal.ns[namespace], ar);
+                            p(cal, ["initNamespace", namespace]);
+                        } else {
+                            p(cal, ar);
+                        }
+                        return;
+                    }
+                    p(cal, ar);
+                };
+            })(window, "https://app.cal.com/embed/embed.js", "init");
+
+            Cal("init", { origin: "https://cal.com" });
+            Cal("inline", {
+                elementOrSelector: "#cal-embed",
+                calLink: calLink,
+                config: { layout: "month_view" }
+            });
+            Cal("ui", {
+                styles: { branding: { brandColor: "#2563eb" } },
+                hideEventTypeDetails: false,
+                layout: "month_view"
+            });
+        }
+
+        async function triggerWebhook() {
+            webhookOverlay.style.display = 'flex';
+
+            // Calcular lead score e salvar nos dados
+            const leadScore = calculateLeadScore();
+            answers.lead_score = leadScore;
+            answers.is_hot_lead = leadScore >= LEAD_SCORE_THRESHOLD;
+
+            console.log(`Lead Score: ${leadScore} | Hot: ${answers.is_hot_lead}`);
+
+            if (!WEBHOOK_URL) {
+                console.log("Dados que seriam enviados:", answers);
+                setTimeout(() => {
+                    webhookOverlay.style.display = 'none';
+                    handlePostWebhook();
+                }, 1500);
+                return;
+            }
+
+            try {
+                const response = await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(answers)
+                });
+                webhookOverlay.style.display = 'none';
+
+                if (response.ok) {
+                    handlePostWebhook();
+                } else {
+                    addBotMessage("Ops, houve um erro ao enviar suas informações. Tente novamente mais tarde.");
+                    document.getElementById('input-area').style.display = 'none';
+                }
+            } catch (error) {
+                webhookOverlay.style.display = 'none';
+                addBotMessage("Ops, houve um erro de conexão ao enviar suas informações.");
+                console.error("Erro no Webhook:", error);
+                document.getElementById('input-area').style.display = 'none';
+            }
+        }
+
+        function handlePostWebhook() {
+            if (answers.is_hot_lead) {
+                // LEAD QUENTE → Tela especial com Cal.com embed
+                showCalScreen();
+            } else {
+                // LEAD FRIO → Redireciona para o router do WhatsApp
+                window.location.href = 'https://n8n.dinastia.uk/webhook/apply-maia';
+            }
+        }
+
+        async function nextStep() {
+            updateProgress();
+            if (currentStep < fields.length) {
+                const field = fields[currentStep];
+                await showTyping();
+                removeTyping();
+                addBotMessage(field.question);
+                setupInput(field);
+            } else {
+                // Fim do form — disparar webhook
+                await triggerWebhook();
+            }
+        }
+
+        function handleSend() {
+            const inputEl = document.getElementById('current-input');
+            let value = inputEl.value.trim();
+
+            if (!value) return;
+
+            const field = fields[currentStep];
+
+            // Formatacao especial
+            let displayValue = value;
+            if (field.type === 'select') {
+                const selectedOption = inputEl.options[inputEl.selectedIndex];
+                displayValue = selectedOption.text;
+            } else if (field.type === 'datetime-local') {
+                displayValue = new Date(value).toLocaleString('pt-BR');
+            } else if (field.type === 'tel') {
+                // Guarda com o +55 explícito e mostra sem
+                value = '+55' + value.replace(/\D/g, '');
+            }
+
+            answers[field.id] = value;
+
+            addUserMessage(displayValue);
+
+            inputEl.value = '';
+
+            currentStep++;
+            nextStep();
+        }
+
+        sendBtn.addEventListener('click', handleSend);
+
+        // Iniciar
+        window.onload = () => {
+            setTimeout(nextStep, 500);
+        };
+
+    </script>
+</body>
+
+</html>

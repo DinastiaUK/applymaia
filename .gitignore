@@ -1,0 +1,5 @@
+# Arquivos gerados na build
+.DS_Store
+
+# Arquivo de teste (não precisa subir)
+cal_test.html
