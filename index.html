@@ -746,63 +746,17 @@
             }
         }
 
-        .cal-btn-container {
+        /* Container do embed Cal.com */
+        .cal-embed-container {
             width: 100%;
-            padding: 24px 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 16px;
+            flex: 1;
+            min-height: 600px;
             background: white;
         }
 
-        @media (min-width: 641px) {
-            .cal-btn-container {
-                padding: 32px 24px;
-            }
-        }
-
-        .cal-btn-container p {
-            font-size: 14px;
-            color: #475569;
-            text-align: center;
-            margin: 0;
-            line-height: 1.6;
-        }
-
-        .cal-schedule-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            padding: 14px 28px;
-            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-            color: white;
-            font-size: 15px;
-            font-weight: 600;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            text-decoration: none;
-            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
-            transition: transform 0.2s, box-shadow 0.2s;
-            touch-action: manipulation;
-            text-align: center;
-        }
-
-        @media (min-width: 641px) {
-            .cal-schedule-btn {
-                padding: 16px 32px;
-                font-size: 16px;
-            }
-        }
-
-        .cal-schedule-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
-        }
-
-        .cal-schedule-btn:active {
-            transform: scale(0.97);
+        #cal-embed {
+            width: 100%;
+            min-height: 600px;
         }
     </style>
     <!-- Import Google Font -->
@@ -850,10 +804,8 @@
                 <p id="cal-subtitle">Identificamos que seu perfil é ideal para uma consultoria personalizada. Agende
                     agora mesmo sua reunião com uma de nossas especialistas!</p>
             </div>
-            <div class="cal-btn-container">
-                <a id="cal-schedule-btn" class="cal-schedule-btn" onclick="openCalLink(event)" href="#">
-                    📅 Agendar minha Reunião
-                </a>
+            <div class="cal-embed-container">
+                <div id="cal-embed"></div>
             </div>
         </div>
 
@@ -1121,22 +1073,61 @@
             return score;
         }
 
-        // Rodizio no CLIQUE — abre a agenda sorteada em nova aba sem referrer
-        function openCalLink(e) {
-            e.preventDefault();
-            const url = CAL_URLS[Math.floor(Math.random() * CAL_URLS.length)];
-            answers.cal_url_assigned = url;
-            window.open(url, '_blank', 'noreferrer,noopener');
-        }
-
         function showCalScreen() {
             document.getElementById('chat-history').style.display = 'none';
             document.getElementById('input-area').style.display = 'none';
+
+            // Roleta aleatória entre as agendas
+            const selectedCal = CAL_URLS[Math.floor(Math.random() * CAL_URLS.length)];
+            answers.cal_url_assigned = selectedCal;
+            const calLink = selectedCal.replace('https://cal.com/', '');
 
             const nome = answers.nome ? answers.nome.split(' ')[0] : '';
             document.getElementById('cal-title').textContent = `Parabéns, ${nome}! Você foi selecionado(a)! 🎉`;
 
             document.getElementById('cal-screen').style.display = 'flex';
+
+            // Cal.com SDK — embed inline oficial
+            (function (C, A, L) {
+                let p = function (a, ar) { a.q.push(ar); };
+                let d = C.document;
+                C.Cal = C.Cal || function () {
+                    let cal = C.Cal;
+                    let ar = arguments;
+                    if (!cal.loaded) {
+                        cal.ns = {};
+                        cal.q = cal.q || [];
+                        d.head.appendChild(d.createElement("script")).src = A;
+                        cal.loaded = true;
+                    }
+                    if (ar[0] === L) {
+                        const api = function () { p(api, arguments); };
+                        const namespace = ar[1];
+                        api.q = api.q || [];
+                        if (typeof namespace === "string") {
+                            cal.ns[namespace] = cal.ns[namespace] || api;
+                            p(cal.ns[namespace], ar);
+                            p(cal, ["initNamespace", namespace]);
+                        } else {
+                            p(cal, ar);
+                        }
+                        return;
+                    }
+                    p(cal, ar);
+                };
+            })(window, "https://app.cal.com/embed/embed.js", "init");
+
+            Cal("init", { origin: "https://cal.com" });
+            Cal("inline", {
+                elementOrSelector: "#cal-embed",
+                calLink: calLink,
+                config: { layout: "month_view" }
+            });
+            Cal("ui", {
+                styles: { branding: { brandColor: "#2563eb" } },
+                hideEventTypeDetails: false,
+                layout: "month_view"
+            });
         }
 
         async function triggerWebhook() {
