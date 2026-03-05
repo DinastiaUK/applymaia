@@ -36,6 +36,7 @@
             padding: 0;
             height: 100%;
             width: 100%;
+            overflow-x: hidden;
             font-family: var(--font-family);
             background-color: var(--bg-color);
             /* Mobile: fundo simples. Desktop: centraliza o card */
@@ -46,20 +47,23 @@
 
         /* ===== CONTAINER PRINCIPAL ===== */
         #chat-container {
-            width: 100%;
+            /* Largura FIXA — nunca muda com o conteúdo interno */
+            width: 100vw;
             max-width: 600px;
-            /* Altura dinâmica: mínimo pra telas pequenas, cresce com conteúdo */
+            min-width: 0;
             min-height: 100dvh;
-            height: auto;
+            height: 100dvh;
             background-color: var(--chat-bg);
             display: flex;
             flex-direction: column;
             position: relative;
-            /* Sem shadow no mobile (full-screen) */
+            /* Impede que filhos expandam o container */
+            overflow: hidden;
         }
 
         /* Desktop: card flutuante com sombra e margem */
         @media (min-width: 641px) {
+
             body,
             html {
                 align-items: center;
@@ -68,17 +72,16 @@
             }
 
             #chat-container {
-                min-height: unset;
-                height: auto;
-                /* Altura dinâmica entre mínimo e máximo */
+                width: 600px;
+                max-width: calc(100vw - 32px);
                 min-height: min(600px, 90dvh);
+                height: min(700px, 90dvh);
                 max-height: 90dvh;
                 border-radius: 20px;
                 overflow: hidden;
                 box-shadow:
                     0 20px 60px rgba(0, 0, 0, 0.15),
                     0 4px 16px rgba(0, 0, 0, 0.08);
-                /* Permite que o container cresça com o conteúdo */
                 flex-shrink: 0;
             }
         }
@@ -364,16 +367,21 @@
             flex-grow: 1;
             display: flex;
             align-items: center;
+            /* Impede que o conteúdo expanda o container pai */
+            min-width: 0;
+            overflow: hidden;
         }
 
         /* Inputs gerados dinamicamente herdam esse estilo */
         #dynamic-input-container input,
         #dynamic-input-container select {
             width: 100%;
+            min-width: 0;
             padding: 12px 16px;
             border: 1.5px solid var(--input-border);
             border-radius: 10px;
-            font-size: 16px; /* 16px evita zoom automático no iOS */
+            font-size: 16px;
+            /* 16px evita zoom automático no iOS */
             font-family: var(--font-family);
             outline: none;
             background-color: #fff;
@@ -385,6 +393,7 @@
         }
 
         @media (min-width: 641px) {
+
             #dynamic-input-container input,
             #dynamic-input-container select {
                 padding: 13px 18px;
@@ -477,13 +486,17 @@
         .phone-input-wrapper {
             display: flex;
             align-items: center;
+            /* width 100% do pai, nunca expande além */
             width: 100%;
+            min-width: 0;
+            max-width: 100%;
             border: 1.5px solid var(--input-border);
             border-radius: 10px;
             background-color: #ffffff;
             transition: border-color 0.2s, box-shadow 0.2s;
             height: 48px;
             overflow: hidden;
+            box-sizing: border-box;
         }
 
         .phone-input-wrapper:focus-within {
@@ -540,7 +553,8 @@
             border: none;
             outline: none;
             padding: 0 10px 0 4px;
-            font-size: 16px; /* Evita zoom iOS */
+            font-size: 16px;
+            /* Evita zoom iOS */
             font-family: var(--font-family);
             background: transparent;
             min-width: 0;
@@ -552,21 +566,26 @@
                 height: 50px;
                 border-radius: 10px;
             }
+
             .phone-country {
                 padding: 0 12px 0 16px;
                 font-size: 15px;
             }
+
             .phone-country img {
                 width: 20px;
                 margin-right: 6px;
             }
+
             .phone-wa-icon {
                 padding: 0 8px 0 12px;
             }
+
             .phone-wa-icon svg {
                 width: 22px;
                 height: 22px;
             }
+
             .phone-input-wrapper input {
                 font-size: 15px;
                 padding: 0 14px 0 4px;
@@ -579,7 +598,8 @@
             padding: 12px 40px 12px 16px;
             border: 1.5px solid var(--input-border);
             border-radius: 10px;
-            font-size: 16px; /* Evita zoom iOS */
+            font-size: 16px;
+            /* Evita zoom iOS */
             outline: none;
             font-family: var(--font-family);
             appearance: none;
