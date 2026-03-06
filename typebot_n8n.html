@@ -1243,18 +1243,23 @@
             }
         }
 
-        function handlePostWebhook() {
+        async function handlePostWebhook() {
             if (answers.is_hot_lead) {
                 // LEAD QUENTE → Tela especial com Cal.com embed
                 showCalScreen();
             } else {
-                // LEAD FRIO → Round-robin WhatsApp (distribuição equilibrada)
-                const whatsappNumbers = ['5521979064294', '5521969027381'];
-                const idx = parseInt(localStorage.getItem('wa_rr_index') || '0', 10);
-                const selectedNumber = whatsappNumbers[idx % whatsappNumbers.length];
-                localStorage.setItem('wa_rr_index', String(idx + 1));
-                const msg = encodeURIComponent('Olá, acabei de preencher o diagnóstico. Quero mais informações.');
-                window.location.href = 'https://wa.me/' + selectedNumber + '?text=' + msg;
+                // LEAD FRIO → Envia para webhook n8n
+                try {
+                    await fetch('https://n8n.dinastia.uk/webhook/apply-maia', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(answers)
+                    });
+                } catch (e) {
+                    console.error('Erro ao enviar lead frio:', e);
+                }
+                addBotMessage("Obrigado! Em breve um dos nossos consultores entrará em contato com você.");
+                document.getElementById('input-area').style.display = 'none';
             }
         }
 
