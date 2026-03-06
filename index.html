@@ -4,7 +4,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Chatbot Interativo</title>
+    <title>Diagnóstico MAIA</title>
+    <link rel="icon" type="image/png" href="https://app.maiacompany.io/maia_logo.png">
+    <!-- Meta Pixel Code -->
+    <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', '495902410236103');
+    fbq('track', 'PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id=495902410236103&ev=PageView&noscript=1"
+    /></noscript>
+    <!-- End Meta Pixel Code -->
     <style>
         :root {
             --bg-color: #f7f7f8;
@@ -258,7 +276,7 @@
             margin-right: 12px;
             background-color: #cbd5e1;
             flex-shrink: 0;
-            background-image: url('https://i.pravatar.cc/150?img=11');
+            background-image: url('avatar.png');
             /* Placeholder image of a person */
             background-size: cover;
             background-position: center;
@@ -836,13 +854,13 @@
 
         // MAPA DOS CAMPOS (sem booking_start_time - agora é via Cal.com)
         const fields = [
-            { id: 'nome', question: "Olá! Qual é o seu nome completo?", type: "text", placeholder: "Ex: João da Silva" },
+            { id: 'nome', question: "Antes de qualquer coisa: você está aqui porque sente que seu negócio poderia estar funcionando melhor sem depender tanto de você, certo?\nVou te fazer algumas perguntas rápidas para entender se o que fazemos faz sentido pro seu momento. Pode começar me dizendo seu nome.", type: "text", placeholder: "Ex: João da Silva" },
             { id: 'telefone', question: "Prazer em conhecer, {nome}! Qual é o seu telefone (com DDD)?", type: "tel", placeholder: "Ex: (11) 99999-9999" },
             { id: 'email', question: "Qual o seu melhor e-mail?", type: "email", placeholder: "Ex: joao@email.com" },
             { id: 'nome_empresa', question: "Qual é o nome da sua empresa?", type: "text", placeholder: "Nome da Empresa" },
             { id: 'nicho', question: "Em qual segmento ou nicho a sua empresa atua?", type: "text", placeholder: "Ex: Tecnologia, Varejo, Saúde..." },
             { id: 'qtd_colaboradores', question: "Qual a quantidade de colaboradores hoje?", type: "select", options: ["1 a 5", "6 a 15", "16 a 50", "51 a 200", "Mais de 200"] },
-            { id: 'cargo', question: "Qual é o seu cargo na empresa?", type: "text", placeholder: "Ex: CEO, Diretor Comercial, Gerente..." },
+            { id: 'cargo', question: "Qual é o seu cargo na empresa?", type: "select", options: ["Sócio ou Fundador", "Presidente ou CEO", "C-Level", "Diretor", "Gerente", "Analista"] },
             { id: 'faturamento_anual', question: "Qual o faturamento anual da empresa (aproximado)?", type: "select", options: ["Até R$ 100 mil", "De R$ 100 mil a R$ 500 mil", "De R$ 500 mil a R$ 1 milhão", "De R$ 1 milhão a R$ 5 milhões", "Acima de R$ 5 milhões"] }
         ];
 
@@ -1130,6 +1148,48 @@
             });
         }
 
+        // ===== META PIXEL — EVENTO LEAD =====
+        function fireMetaLeadEvent() {
+            if (typeof fbq === 'undefined') return;
+
+            // Separa primeiro nome e sobrenome
+            const nomeParts = (answers.nome || '').trim().split(/\s+/);
+            const firstName = nomeParts[0] || '';
+            const lastName = nomeParts.length > 1 ? nomeParts.slice(1).join(' ') : '';
+
+            // Telefone só dígitos (já vem com +55)
+            const phoneDigits = (answers.telefone || '').replace(/\D/g, '');
+
+            // Re-init com Advanced Matching (dados do usuário)
+            fbq('init', '495902410236103', {
+                em: (answers.email || '').toLowerCase().trim(),
+                fn: firstName.toLowerCase(),
+                ln: lastName.toLowerCase(),
+                ph: phoneDigits,
+                country: 'br'
+            });
+
+            // Dispara evento Lead com parâmetros customizados
+            fbq('track', 'Lead', {
+                content_name: 'Diagnóstico MAIA',
+                content_category: 'Apply',
+                value: answers.lead_score,
+                currency: 'BRL',
+                nome: answers.nome,
+                email: answers.email,
+                telefone: answers.telefone,
+                nome_empresa: answers.nome_empresa,
+                nicho: answers.nicho,
+                qtd_colaboradores: answers.qtd_colaboradores,
+                cargo: answers.cargo,
+                faturamento_anual: answers.faturamento_anual,
+                lead_score: answers.lead_score,
+                is_hot_lead: answers.is_hot_lead
+            });
+
+            console.log('Meta Pixel: Lead event fired');
+        }
+
         async function triggerWebhook() {
             webhookOverlay.style.display = 'flex';
 
@@ -1137,6 +1197,9 @@
             const leadScore = calculateLeadScore();
             answers.lead_score = leadScore;
             answers.is_hot_lead = leadScore >= LEAD_SCORE_THRESHOLD;
+
+            // Dispara evento Lead para a Meta
+            fireMetaLeadEvent();
 
             console.log(`Lead Score: ${leadScore} | Hot: ${answers.is_hot_lead}`);
 
@@ -1176,8 +1239,13 @@
                 // LEAD QUENTE → Tela especial com Cal.com embed
                 showCalScreen();
             } else {
-                // LEAD FRIO → Redireciona para o router do WhatsApp
-                window.location.href = 'https://n8n.dinastia.uk/webhook/apply-maia';
+                // LEAD FRIO → Round-robin WhatsApp (distribuição equilibrada)
+                const whatsappNumbers = ['5521979064294', '5521969027381'];
+                const idx = parseInt(localStorage.getItem('wa_rr_index') || '0', 10);
+                const selectedNumber = whatsappNumbers[idx % whatsappNumbers.length];
+                localStorage.setItem('wa_rr_index', String(idx + 1));
+                const msg = encodeURIComponent('Olá, acabei de preencher o diagnóstico. Quero mais informações.');
+                window.location.href = 'https://wa.me/' + selectedNumber + '?text=' + msg;
             }
         }
 
