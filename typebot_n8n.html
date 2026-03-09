@@ -915,6 +915,15 @@
         let currentStep = 0;
         const answers = {};
 
+        // Captura UTMs da URL
+        (function captureUtms() {
+            const params = new URLSearchParams(window.location.search);
+            ['utm_campaign', 'utm_source', 'utm_medium', 'utm_content'].forEach(key => {
+                const val = params.get(key);
+                if (val) answers[key] = val;
+            });
+        })();
+
         const chatHistory = document.getElementById('chat-history');
         const dynamicInputContainer = document.getElementById('dynamic-input-container');
         const sendBtn = document.getElementById('send-btn');
