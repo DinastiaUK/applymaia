@@ -852,27 +852,31 @@
             'https://cal.com/larissa-alvarenga-1grx8k/30min'
         ];
 
-        // MAPA DOS CAMPOS (sem booking_start_time - agora é via Cal.com)
+        // MAPA DOS CAMPOS (nome, telefone, email e faturamento vêm da URL)
         const fields = [
-            { id: 'nome', question: "Antes de qualquer coisa: você está aqui porque sente que seu negócio poderia estar funcionando melhor sem depender tanto de você, certo?\nVou te fazer algumas perguntas rápidas para entender se o que fazemos faz sentido pro seu momento. Pode começar me dizendo seu nome.", type: "text", placeholder: "Ex: João da Silva" },
-            { id: 'telefone', question: "Prazer em conhecer, {nome}! Qual é o seu telefone (com DDD)?", type: "tel", placeholder: "Ex: (11) 99999-9999" },
-            { id: 'email', question: "Qual o seu melhor e-mail?", type: "email", placeholder: "Ex: joao@email.com" },
-            { id: 'nome_empresa', question: "Qual é o nome da sua empresa?", type: "text", placeholder: "Nome da Empresa" },
+            { id: 'nome_empresa', question: "Antes de qualquer coisa: você está aqui porque sente que seu negócio poderia estar funcionando melhor sem depender tanto de você, certo?\nVou te fazer algumas perguntas rápidas para entender se o que fazemos faz sentido pro seu momento. Qual é o nome da sua empresa?", type: "text", placeholder: "Nome da Empresa" },
             { id: 'nicho', question: "Em qual segmento ou nicho a sua empresa atua?", type: "text", placeholder: "Ex: Tecnologia, Varejo, Saúde..." },
             { id: 'qtd_colaboradores', question: "Qual a quantidade de colaboradores hoje?", type: "select", options: ["1 a 5", "6 a 15", "16 a 50", "51 a 200", "Mais de 200"] },
             { id: 'cargo', question: "Qual é o seu cargo na empresa?", type: "select", options: ["Sócio ou Fundador", "Presidente ou CEO", "C-Level", "Diretor", "Gerente", "Analista"] },
-            { id: 'faturamento_anual', question: "Qual o faturamento anual da empresa (aproximado)?", type: "select", options: ["Até R$ 100 mil", "De R$ 100 mil a R$ 500 mil", "De R$ 500 mil a R$ 1 milhão", "De R$ 1 milhão a R$ 5 milhões", "Acima de R$ 5 milhões"] }
+            { id: 'principal_gargalo', question: "Qual o principal gargalo na sua operação que você gostaria de resolver?", type: "text", placeholder: "Ex: Falta de processos, equipe sobrecarregada..." },
+            { id: 'melhor_turno', question: "Qual o melhor turno para falarmos?", type: "select", options: ["Manhã (8h-12h)", "Tarde (13h-18h)"] }
         ];
 
         let currentStep = 0;
         const answers = {};
 
-        // Captura UTMs da URL
-        (function captureUtms() {
+        // Captura UTMs e dados do lead da URL
+        (function captureUrlParams() {
             const params = new URLSearchParams(window.location.search);
+            // UTMs
             ['utm_campaign', 'utm_source', 'utm_medium', 'utm_content'].forEach(key => {
                 const val = params.get(key);
                 if (val) answers[key] = val;
+            });
+            // Dados do lead vindos da URL
+            ['nome', 'telefone', 'email', 'faturamento_anual'].forEach(key => {
+                const val = params.get(key);
+                if (val) answers[key] = decodeURIComponent(val);
             });
         })();
 
