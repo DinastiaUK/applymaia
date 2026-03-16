@@ -846,11 +846,12 @@
         const answers = {};
 
         // ===== CAPTURA UTMs DA URL =====
+        const utmParams = {};
         (function captureUrlParams() {
             const params = new URLSearchParams(window.location.search);
-            ['utm_campaign', 'utm_source', 'utm_medium', 'utm_content'].forEach(key => {
+            ['utm_source', 'utm_campaign', 'utm_medium', 'utm_content', 'utm_term'].forEach(key => {
                 const val = params.get(key);
-                if (val) answers[key] = val;
+                if (val) utmParams[key] = val;
             });
         })();
 
@@ -1199,14 +1200,35 @@
             answers.lead_classification = leadClassification;
             answers.created_at = new Date().toISOString();
 
+            // Monta payload final com UTMs separados
+            const payload = {
+                // Dados do formulário
+                nome: answers.nome,
+                email: answers.email,
+                telefone: answers.telefone,
+                nome_empresa: answers.nome_empresa,
+                nicho: answers.nicho,
+                qtd_colaboradores: answers.qtd_colaboradores,
+                cargo: answers.cargo,
+                faturamento_mensal: answers.faturamento_mensal,
+                lead_classification: answers.lead_classification,
+                created_at: answers.created_at,
+                // UTMs separados
+                utm_source: utmParams.utm_source || null,
+                utm_campaign: utmParams.utm_campaign || null,
+                utm_medium: utmParams.utm_medium || null,
+                utm_content: utmParams.utm_content || null,
+                utm_term: utmParams.utm_term || null
+            };
+
             console.log(`Lead Classification: ${leadClassification}`);
-            console.log('Dados do lead:', answers);
+            console.log('Payload completo:', payload);
 
             // Dispara evento Lead para a Meta
             fireMetaLeadEvent();
 
             if (!WEBHOOK_URL) {
-                console.log("Dados que seriam enviados:", answers);
+                console.log("Dados que seriam enviados:", payload);
                 setTimeout(() => {
                     webhookOverlay.style.display = 'none';
                     showFinalMessage();
@@ -1221,7 +1243,7 @@
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
                     },
-                    body: JSON.stringify(answers)
+                    body: JSON.stringify(payload)
                 });
             } catch (error) {
                 console.error("Erro no Webhook:", error);
