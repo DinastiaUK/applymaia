@@ -760,7 +760,16 @@
     <script>
         // ===== CONFIGURACOES =====
         const WEBHOOK_URL = 'https://n8n.dinastia.uk/webhook/dfe82a01-a414-4cf3-8d21-c8fa51e4a68e';
-        const REDIRECT_URL = 'https://n8n.dinastia.uk/webhook/apply-maia';
+
+        // Configuração dos closers para roleta WhatsApp
+        const CLOSERS = [
+            { nome: 'larissa', numero: '556182103941' },
+            { nome: 'raquel', numero: '5521969027381' }
+        ];
+        const WHATSAPP_MESSAGE = "Ol%C3%A1%2C%20acabei%20de%20preencher%20a%20aplica%C3%A7%C3%A3o%20e%20gostaria%20do%20link%20da%20aula%20de%20dashboard%20com%20IA";
+
+        // Seleciona closer aleatoriamente no início
+        const selectedCloser = CLOSERS[Math.floor(Math.random() * CLOSERS.length)];
 
         // Lista de paises com DDI
         const COUNTRIES = [
@@ -1213,6 +1222,8 @@
                 faturamento_mensal: answers.faturamento_mensal,
                 lead_classification: answers.lead_classification,
                 created_at: answers.created_at,
+                // Closer selecionado na roleta
+                closer: selectedCloser.nome,
                 // UTMs separados
                 utm_source: utmParams.utm_source || null,
                 utm_campaign: utmParams.utm_campaign || null,
@@ -1254,8 +1265,9 @@
         }
 
         async function showFinalMessage() {
-            // Redireciona imediatamente
-            window.location.href = REDIRECT_URL;
+            // Redireciona para WhatsApp do closer selecionado
+            const whatsappUrl = `https://wa.me/${selectedCloser.numero}?text=${WHATSAPP_MESSAGE}`;
+            window.location.href = whatsappUrl;
         }
 
         // ===== NAVEGACAO =====
