@@ -768,8 +768,25 @@
         ];
         const WHATSAPP_MESSAGE = "Ol%C3%A1%2C%20acabei%20de%20preencher%20a%20aplica%C3%A7%C3%A3o%20e%20gostaria%20do%20link%20da%20aula%20de%20dashboard%20com%20IA";
 
-        // Seleciona closer aleatoriamente no início
-        const selectedCloser = CLOSERS[Math.floor(Math.random() * CLOSERS.length)];
+        // Closer será selecionado via roleta n8n
+        let selectedCloser = null;
+
+        async function fetchCloserFromRoleta() {
+            try {
+                const response = await fetch('https://n8n.dinastia.uk/webhook/isca-dinastia/roleta');
+                const data = await response.json();
+                const nomeCloser = (data.nome || data.name || data.closer || '').toString().toLowerCase().trim();
+                selectedCloser = CLOSERS.find(c => c.nome === nomeCloser);
+                if (!selectedCloser) {
+                    console.warn('Closer não encontrado na lista, usando primeiro:', nomeCloser);
+                    selectedCloser = CLOSERS[0];
+                }
+            } catch (error) {
+                console.error('Erro na roleta, usando fallback:', error);
+                selectedCloser = CLOSERS[0];
+            }
+            console.log('Closer selecionado pela roleta:', selectedCloser.nome);
+        }
 
         // Lista de paises com DDI
         const COUNTRIES = [
@@ -1208,6 +1225,9 @@
             );
             answers.lead_classification = leadClassification;
             answers.created_at = new Date().toISOString();
+
+            // Busca closer da roleta n8n
+            await fetchCloserFromRoleta();
 
             // Monta payload final com UTMs separados
             const payload = {
